@@ -1,0 +1,100 @@
+spring:
+  application:
+    name: ourtime
+  
+  # Database
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/ourtime?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: root
+    
+  # JPA
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+        # dialect: org.hibernate.dialect.MySQLDialect  # 자동 감지되므로 제거
+    open-in-view: false
+    
+  # File Upload
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+      
+  # AWS S3
+  cloud:
+    aws:
+      credentials:
+        access-key: ${AWS_ACCESS_KEY:your-access-key}
+        secret-key: ${AWS_SECRET_KEY:your-secret-key}
+      s3:
+        bucket: ${AWS_S3_BUCKET:ourtime-bucket}
+      region:
+        static: ap-northeast-2
+      stack:
+        auto: false
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET:ourtime-secret-key-for-jwt-token-generation-please-change-in-production}
+  expiration: 86400000 # 24 hours in milliseconds
+  refresh-expiration: 604800000 # 7 days in milliseconds
+
+# Logging
+logging:
+  level:
+    com.ourtime: debug
+    org.hibernate.SQL: debug
+    org.hibernate.type.descriptor.sql.BasicBinder: trace
+
+# Springdoc OpenAPI
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+  api-docs:
+    path: /api-docs
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        show_sql: false
+logging:
+  level:
+    com.ourtime: info
