@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="OurTime - 함께하는 시간을 기록하는 그룹 메모리 서비스"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <title>OurTime - 우리의 시간</title>
+    
+    <!-- 네이버 지도 API -->
+    <!-- 클라이언트 ID: 2gjx4xjyq0 -->
+    <!-- 도메인: https://sujin.store -->
+    <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=YOUR_CLIENT_ID"></script>
+    <script>
+      // 네이버 지도 API 인증 실패 처리
+      window.navermap_authFailure = function () {
+        console.error('❌ 네이버 지도 API 인증 실패 - 클라이언트 ID와 도메인을 확인하세요');
+      };
+
+      // 네이버 지도 API 사용을 위한 설정
+      window.addEventListener('load', function() {
+        if (typeof naver !== 'undefined') {
+          console.log('✅ 네이버 지도 API 로드 완료');
+        } else {
+          console.error('❌ 네이버 지도 API 로드 실패 - 클라이언트 ID를 확인하세요');
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

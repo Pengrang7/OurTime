@@ -78,6 +78,14 @@ public class MemoryService {
         return MemoryResponse.from(savedMemory);
     }
 
+    public List<MemoryResponse> getAllMemoriesByUserId(Long userId) {
+        // 사용자가 속한 그룹들의 모든 메모리를 조회
+        List<Memory> memories = memoryRepository.findAllByUserId(userId);
+        return memories.stream()
+                .map(MemoryResponse::from)
+                .collect(Collectors.toList());
+    }
+
     public MemoryResponse getMemoryById(Long memoryId, Long userId) {
         Memory memory = memoryRepository.findById(memoryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMORY_NOT_FOUND));

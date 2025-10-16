@@ -126,7 +126,40 @@ Like	id, memory_id, user_id
 
 ### 설치 및 실행
 
-#### 1. 프로젝트 클론
+#### 1. 환경 변수 설정
+
+프로젝트를 실행하기 전에 환경 변수를 설정해야 합니다.
+
+**백엔드 환경 변수:**
+```bash
+# 데이터베이스 설정
+export SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/ourtime?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
+export SPRING_DATASOURCE_USERNAME="root"
+export SPRING_DATASOURCE_PASSWORD="your_password"
+
+# JWT 설정
+export JWT_SECRET="your_jwt_secret_key_here"
+
+# AWS S3 설정 (파일 업로드용)
+export AWS_ACCESS_KEY_ID="your_aws_access_key"
+export AWS_SECRET_ACCESS_KEY="your_aws_secret_key"
+export AWS_S3_BUCKET_NAME="your_s3_bucket_name"
+```
+
+**프론트엔드 환경 변수:**
+```bash
+# API URL
+export REACT_APP_API_URL="http://localhost:8080/api"
+
+# 네이버 지도 API
+export REACT_APP_NAVER_MAP_CLIENT_ID="your_naver_map_client_id"
+```
+
+또는 `.env` 파일을 생성하여 설정할 수 있습니다:
+- 백엔드: `env.example` 파일을 참고하여 `.env` 파일 생성
+- 프론트엔드: `frontend/env.example` 파일을 참고하여 `frontend/.env` 파일 생성
+
+#### 2. 프로젝트 클론
 ```bash
 git clone <repository-url>
 cd OurTime

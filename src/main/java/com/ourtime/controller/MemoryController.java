@@ -28,6 +28,14 @@ public class MemoryController {
 
     private final MemoryService memoryService;
 
+    @Operation(summary = "전체 추억 목록 조회", description = "현재 사용자가 접근 가능한 모든 추억을 조회합니다.")
+    @GetMapping
+    public ApiResponse<List<MemoryResponse>> getAllMemories() {
+        Long userId = SecurityUtil.getCurrentUserId();
+        List<MemoryResponse> response = memoryService.getAllMemoriesByUserId(userId);
+        return ApiResponse.success(response);
+    }
+
     @Operation(summary = "추억 생성", description = "새로운 추억을 생성합니다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

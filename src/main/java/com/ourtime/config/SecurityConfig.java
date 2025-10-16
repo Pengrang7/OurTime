@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
+                        .requestMatchers("/api/**").permitAll() // 개발 중 임시로 모든 API 허용
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers

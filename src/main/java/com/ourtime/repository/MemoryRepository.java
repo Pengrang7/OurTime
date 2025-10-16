@@ -24,6 +24,9 @@ public interface MemoryRepository extends JpaRepository<Memory, Long> {
     @Query("SELECT m FROM Memory m WHERE m.user.id = :userId ORDER BY m.visitedAt DESC")
     Page<Memory> findAllByUserId(@Param("userId") Long userId, Pageable pageable);
 
+    @Query("SELECT m FROM Memory m WHERE m.user.id = :userId ORDER BY m.visitedAt DESC")
+    List<Memory> findAllByUserId(@Param("userId") Long userId);
+
     @Query("SELECT m FROM Memory m " +
            "WHERE m.group.id = :groupId " +
            "AND m.visitedAt BETWEEN :startDate AND :endDate " +
