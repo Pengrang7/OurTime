@@ -1,15 +1,18 @@
 package com.ourtime.service;
 
 import com.ourtime.domain.Group;
+import com.ourtime.domain.GroupInvitation;
 import com.ourtime.domain.User;
 import com.ourtime.domain.UserGroup;
 import com.ourtime.domain.UserGroupRole;
 import com.ourtime.dto.group.CreateGroupRequest;
+import com.ourtime.dto.group.GroupCreateRequest;
 import com.ourtime.dto.group.GroupResponse;
 import com.ourtime.dto.group.JoinGroupRequest;
 import com.ourtime.dto.group.UpdateGroupRequest;
 import com.ourtime.exception.BusinessException;
 import com.ourtime.exception.ErrorCode;
+import com.ourtime.repository.GroupInvitationRepository;
 import com.ourtime.repository.GroupRepository;
 import com.ourtime.repository.UserGroupRepository;
 import com.ourtime.repository.UserRepository;
@@ -30,6 +33,7 @@ public class GroupService {
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
     private final UserGroupRepository userGroupRepository;
+    private final GroupInvitationRepository groupInvitationRepository;
 
     @Transactional
     public GroupResponse createGroup(Long userId, CreateGroupRequest request) {
@@ -59,6 +63,67 @@ public class GroupService {
         log.info("새 그룹 생성: {} by {}", savedGroup.getId(), userId);
 
         return GroupResponse.from(savedGroup, 1);
+    }
+
+    /**
+     * 그룹 생성 및 멤버 초대
+     */
+    @Transactional
+    public GroupResponse createGroupWithInvites(Long userId, GroupCreateRequest request) {
+        User creator = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 그룹 생성
+        Group group = Group.builder()
+                .name(request.getName())
+                .type(request.getType())
+                .description(request.getDescription())
+                .createdBy(userId)
+                .build();
+
+        Group savedGroup = groupRepository.save(group);
+
+        // 생성자를 ADMIN으로 그룹에 추가
+        UserGroup userGroup = UserGroup.builder()
+                .user(creator)
+                .group(savedGroup)
+                .role(UserGroupRole.ADMIN)
+                .build();
+
+        userGroupRepository.save(userGroup);
+
+        // 멤버 초대
+        if (request.getInviteeEmails() != null && !request.getInviteeEmails().isEmpty()) {
+            for (String email : request.getInviteeEmails()) {
+                User invitee = userRepository.findByEmail(email)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "초대할 사용자를 찾을 수 없습니다: " + email));
+
+                // 이미 그룹 멤버인지 확인
+                if (userGroupRepository.existsByUserIdAndGroupId(invitee.getId(), savedGroup.getId())) {
+                    continue; // 이미 멤버면 건너뛰기
+                }
+
+                // 이미 초대된 적이 있는지 확인
+                if (groupInvitationRepository.findPendingInvitation(savedGroup.getId(), invitee.getId()).isPresent()) {
+                    continue; // 이미 초대되었으면 건너뛰기
+                }
+
+                // 초대 생성
+                GroupInvitation invitation = GroupInvitation.builder()
+                        .group(savedGroup)
+                        .inviter(creator)
+                        .invitee(invitee)
+                        .build();
+
+                groupInvitationRepository.save(invitation);
+                log.info("그룹 {} 멤버 {} 초대", savedGroup.getId(), invitee.getEmail());
+            }
+        }
+
+        log.info("새 그룹 생성 및 초대 완료: {} by {}", savedGroup.getId(), userId);
+
+        int memberCount = (int) userGroupRepository.countByGroupId(savedGroup.getId());
+        return GroupResponse.from(savedGroup, memberCount);
     }
 
     public GroupResponse getGroupById(Long groupId, Long userId) {

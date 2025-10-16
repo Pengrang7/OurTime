@@ -36,11 +36,12 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
+                        // 인증 없이 접근 가능한 엔드포인트
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
-                        .requestMatchers("/api/**").permitAll() // 개발 중 임시로 모든 API 허용
+                        // 나머지는 인증 필요
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers

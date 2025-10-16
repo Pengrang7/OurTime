@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import GroupList from './pages/GroupList';
 import MemoryDetail from './pages/MemoryDetail';
+import Notifications from './pages/Notifications';
 
 const AppContainer = styled.div`
   display: flex;
@@ -30,6 +31,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/groups" element={<GroupList />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/memory/:id" element={<MemoryDetail />} />
         </Routes>
       </MainContent>

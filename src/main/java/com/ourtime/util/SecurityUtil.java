@@ -20,6 +20,11 @@ public class SecurityUtil {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
+        // anonymousUser인 경우 인증되지 않은 사용자
+        if ("anonymousUser".equals(authentication.getName())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+
         try {
             return Long.parseLong(authentication.getName());
         } catch (NumberFormatException e) {

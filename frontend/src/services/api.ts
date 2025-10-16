@@ -99,6 +99,16 @@ export const groupApi = {
     return response.data.data;
   },
 
+  createGroupWithInvites: async (data: { 
+    name: string; 
+    type: string; 
+    description?: string;
+    inviteeEmails?: string[];
+  }): Promise<Group> => {
+    const response = await api.post('/groups/with-invites', data);
+    return response.data.data;
+  },
+
   joinGroup: async (inviteCode: string): Promise<Group> => {
     const response = await api.post('/groups/join', { inviteCode });
     return response.data.data;
@@ -187,6 +197,27 @@ export const commentApi = {
 
   deleteComment: async (commentId: number): Promise<void> => {
     await api.delete(`/comments/${commentId}`);
+  },
+};
+
+// 초대 API
+export const invitationApi = {
+  getInvitations: async (): Promise<any[]> => {
+    const response = await api.get('/invitations');
+    return response.data.data;
+  },
+
+  getPendingInvitations: async (): Promise<any[]> => {
+    const response = await api.get('/invitations/pending');
+    return response.data.data;
+  },
+
+  acceptInvitation: async (invitationId: number): Promise<void> => {
+    await api.post(`/invitations/${invitationId}/accept`);
+  },
+
+  rejectInvitation: async (invitationId: number): Promise<void> => {
+    await api.post(`/invitations/${invitationId}/reject`);
   },
 };
 

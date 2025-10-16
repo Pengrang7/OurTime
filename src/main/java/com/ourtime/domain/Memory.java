@@ -50,7 +50,7 @@ public class Memory extends BaseTimeEntity {
     private LocalDateTime visitedAt;
 
     @Builder.Default
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "memory_images", joinColumns = @JoinColumn(name = "memory_id"))
     @Column(name = "image_url", length = 500)
     private List<String> imageUrls = new ArrayList<>();

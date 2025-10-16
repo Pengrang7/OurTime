@@ -2,6 +2,7 @@ package com.ourtime.controller;
 
 import com.ourtime.dto.common.ApiResponse;
 import com.ourtime.dto.group.CreateGroupRequest;
+import com.ourtime.dto.group.GroupCreateRequest;
 import com.ourtime.dto.group.GroupResponse;
 import com.ourtime.dto.group.JoinGroupRequest;
 import com.ourtime.dto.group.UpdateGroupRequest;
@@ -31,6 +32,15 @@ public class GroupController {
         Long userId = SecurityUtil.getCurrentUserId();
         GroupResponse response = groupService.createGroup(userId, request);
         return ApiResponse.success(response, "그룹이 생성되었습니다.");
+    }
+
+    @Operation(summary = "그룹 생성 및 멤버 초대", description = "새로운 그룹을 생성하고 멤버를 초대합니다. 생성자는 자동으로 ADMIN이 됩니다.")
+    @PostMapping("/with-invites")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<GroupResponse> createGroupWithInvites(@Valid @RequestBody GroupCreateRequest request) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        GroupResponse response = groupService.createGroupWithInvites(userId, request);
+        return ApiResponse.success(response, "그룹이 생성되고 초대가 전송되었습니다.");
     }
 
     @Operation(summary = "내 그룹 목록 조회", description = "내가 속한 모든 그룹을 조회합니다.")

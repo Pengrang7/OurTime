@@ -191,6 +191,7 @@ const Header: React.FC = () => {
       <Nav>
         <NavLink to="/">지도</NavLink>
         <NavLink to="/groups">그룹</NavLink>
+        {isAuthenticated && <NavLink to="/notifications">🔔 알림</NavLink>}
         
         {isAuthenticated ? (
           <UserMenu>

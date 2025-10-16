@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { groupApi } from '../services/api';
 import toast from 'react-hot-toast';
+import GroupCreateModal from '../components/GroupCreateModal';
 
 const GroupListContainer = styled.div`
   padding: 24px;
@@ -85,6 +86,7 @@ const GroupInfo = styled.div`
 
 const GroupList: React.FC = () => {
   const queryClient = useQueryClient();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const { data: groups = [], isLoading } = useQuery(
     'groups',
@@ -139,7 +141,12 @@ const GroupList: React.FC = () => {
 
   return (
     <GroupListContainer>
-      <Title>그룹 목록</Title>
+      <HeaderSection>
+        <Title>그룹 목록</Title>
+        <CreateButton onClick={() => setIsCreateModalOpen(true)}>
+          + 새 그룹 만들기
+        </CreateButton>
+      </HeaderSection>
       
       {groups.length === 0 ? (
         <div style={{ 
@@ -184,8 +191,37 @@ const GroupList: React.FC = () => {
           ))}
         </GroupGrid>
       )}
+
+      <GroupCreateModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+      />
     </GroupListContainer>
   );
 };
+
+// 추가 스타일 컴포넌트
+const HeaderSection = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+`;
+
+const CreateButton = styled.button`
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #2563eb;
+  }
+`;
 
 export default GroupList;

@@ -33,6 +33,11 @@ public enum ErrorCode {
     NOT_GROUP_MEMBER(HttpStatus.FORBIDDEN, "G004", "그룹의 멤버가 아닙니다."),
     NOT_GROUP_ADMIN(HttpStatus.FORBIDDEN, "G005", "그룹의 관리자가 아닙니다."),
     CANNOT_LEAVE_AS_ADMIN(HttpStatus.BAD_REQUEST, "G006", "관리자는 그룹을 탈퇴할 수 없습니다. 먼저 다른 멤버에게 관리자 권한을 이양하세요."),
+    
+    // Group Invitation
+    INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "GI001", "초대를 찾을 수 없습니다."),
+    NOT_INVITATION_RECIPIENT(HttpStatus.FORBIDDEN, "GI002", "초대받은 사람이 아닙니다."),
+    INVITATION_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "GI003", "이미 처리된 초대입니다."),
 
     // Memory
     MEMORY_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "추억을 찾을 수 없습니다."),
