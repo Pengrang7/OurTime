@@ -159,3 +159,13 @@ Thumbs.db
 application-local.yml
 application-dev.yml
 application-prod.yml
+
+# Local development files
+local.env
+frontend/local.env
+.env.local
+frontend/.env.local
+frontend/config.local.js
+config.local.js
+frontend/src/config.local.ts
+src/config.local.ts

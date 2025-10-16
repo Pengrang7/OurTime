@@ -155,9 +155,17 @@ export REACT_APP_API_URL="http://localhost:8080/api"
 export REACT_APP_NAVER_MAP_CLIENT_ID="your_naver_map_client_id"
 ```
 
-또는 `.env` 파일을 생성하여 설정할 수 있습니다:
+또는 설정 파일을 생성하여 설정할 수 있습니다:
 - 백엔드: `env.example` 파일을 참고하여 `.env` 파일 생성
-- 프론트엔드: `frontend/env.example` 파일을 참고하여 `frontend/.env` 파일 생성
+- 프론트엔드: `frontend/src/config.local.example.ts` 파일을 복사하여 `frontend/src/config.local.ts` 파일 생성 후 실제 값 입력
+
+**프론트엔드 로컬 설정:**
+```bash
+# frontend/src/config.local.example.ts를 복사
+cp frontend/src/config.local.example.ts frontend/src/config.local.ts
+
+# config.local.ts 파일을 열고 실제 네이버 지도 클라이언트 ID 입력
+```
 
 #### 2. 프로젝트 클론
 ```bash

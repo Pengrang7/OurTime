@@ -170,38 +170,50 @@ const NaverMap: React.FC<NaverMapProps> = ({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    let map;
-    try {
-      // 네이버 지도 초기화
-      map = new window.naver.maps.Map(mapRef.current, {
-        center: new window.naver.maps.LatLng(37.5665, 126.9780), // 서울 중심
-        zoom: 13,
-        mapTypeControl: true,
-        mapTypeControlOptions: {
-          style: window.naver.maps.MapTypeControlStyle.BUTTON,
-          position: window.naver.maps.Position.TOP_RIGHT
-        },
-        zoomControl: true,
-        zoomControlOptions: {
-          style: window.naver.maps.ZoomControlStyle.SMALL,
-          position: window.naver.maps.Position.RIGHT_CENTER
-        }
-      });
+    // 네이버 지도 API가 로드될 때까지 대기
+    const initMap = () => {
+      if (!window.naver || !window.naver.maps) {
+        console.log('⏳ 네이버 지도 API 로드 대기 중...');
+        setTimeout(initMap, 100); // 100ms 후 다시 시도
+        return;
+      }
 
-      mapInstance.current = map;
-      setMapLoadError(false);
-    } catch (error) {
-      console.error('네이버 지도 초기화 실패:', error);
-      setMapLoadError(true);
-      return;
-    }
+      let map;
+      try {
+        // 네이버 지도 초기화
+        map = new window.naver.maps.Map(mapRef.current, {
+          center: new window.naver.maps.LatLng(37.5665, 126.9780), // 서울 중심
+          zoom: 13,
+          mapTypeControl: true,
+          mapTypeControlOptions: {
+            style: window.naver.maps.MapTypeControlStyle.BUTTON,
+            position: window.naver.maps.Position.TOP_RIGHT
+          },
+          zoomControl: true,
+          zoomControlOptions: {
+            style: window.naver.maps.ZoomControlStyle.SMALL,
+            position: window.naver.maps.Position.RIGHT_CENTER
+          }
+        });
 
-    // 지도 클릭 이벤트
-    window.naver.maps.Event.addListener(map, 'click', (e: any) => {
-      const lat = e.coord.lat();
-      const lng = e.coord.lng();
-      onMapClick(lat, lng);
-    });
+        mapInstance.current = map;
+        setMapLoadError(false);
+        console.log('🗺️ 네이버 지도 초기화 성공');
+
+        // 지도 클릭 이벤트
+        window.naver.maps.Event.addListener(map, 'click', (e: any) => {
+          const lat = e.coord.lat();
+          const lng = e.coord.lng();
+          onMapClick(lat, lng);
+        });
+      } catch (error) {
+        console.error('네이버 지도 초기화 실패:', error);
+        setMapLoadError(true);
+        return;
+      }
+    };
+
+    initMap();
 
     return () => {
       // 정리
