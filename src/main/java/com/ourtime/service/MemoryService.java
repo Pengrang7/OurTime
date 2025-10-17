@@ -119,8 +119,9 @@ public class MemoryService {
     }
 
     public List<MemoryResponse> getAllMemoriesByUserId(Long userId) {
-        // 사용자가 속한 그룹들의 모든 메모리를 조회
-        List<Memory> memories = memoryRepository.findAllByUserId(userId);
+        // 사용자가 속한 그룹들의 모든 메모리를 조회 (다른 사용자가 생성한 메모리도 포함)
+        List<Memory> memories = memoryRepository.findAllByUserGroups(userId);
+        log.debug("사용자 {}가 속한 그룹들의 메모리 {}개 조회", userId, memories.size());
         return memories.stream()
                 .map(MemoryResponse::from)
                 .collect(Collectors.toList());

@@ -26,6 +26,14 @@ public interface MemoryRepository extends JpaRepository<Memory, Long> {
 
     @Query("SELECT m FROM Memory m WHERE m.user.id = :userId ORDER BY m.visitedAt DESC")
     List<Memory> findAllByUserId(@Param("userId") Long userId);
+    
+    // 사용자가 속한 그룹들의 모든 메모리 조회
+    @Query("SELECT DISTINCT m FROM Memory m " +
+           "JOIN m.group g " +
+           "JOIN g.userGroups ug " +
+           "WHERE ug.user.id = :userId " +
+           "ORDER BY m.visitedAt DESC")
+    List<Memory> findAllByUserGroups(@Param("userId") Long userId);
 
     @Query("SELECT m FROM Memory m " +
            "WHERE m.group.id = :groupId " +
