@@ -146,8 +146,15 @@ export const memoryApi = {
     formData.append('visitedAt', data.visitedAt);
     
     if (data.description) formData.append('description', data.description);
-    if (data.locationName) formData.append('locationName', data.locationName);
-    if (data.tagNames) formData.append('tagNames', JSON.stringify(data.tagNames));
+    if (data.locationName) {
+      formData.append('locationName', data.locationName);
+      console.log('위치명 전송:', data.locationName);
+    }
+    if (data.tagNames && data.tagNames.length > 0) {
+      const tagNamesJson = JSON.stringify(data.tagNames);
+      formData.append('tagNames', tagNamesJson);
+      console.log('태그 전송:', tagNamesJson);
+    }
     if (data.images) {
       data.images.forEach(image => formData.append('images', image));
     }
@@ -161,6 +168,12 @@ export const memoryApi = {
   },
 
   updateMemory: async (memoryId: number, data: Partial<CreateMemoryRequest>): Promise<Memory> => {
+    console.log('메모리 업데이트 요청:', {
+      memoryId,
+      locationName: data.locationName,
+      tagNames: data.tagNames,
+      data
+    });
     const response = await api.put(`/memories/${memoryId}`, data);
     return response.data.data;
   },

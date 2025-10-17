@@ -420,14 +420,6 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
           </FormGroup>
 
           <FormGroup>
-            <Label>위치명</Label>
-            <Input
-              {...register('locationName')}
-              placeholder="위치명을 입력하세요 (예: 강남역)"
-            />
-          </FormGroup>
-
-          <FormGroup>
             <Label>이미지</Label>
             <ImageUploadArea onClick={() => document.getElementById('image-upload')?.click()}>
               <input

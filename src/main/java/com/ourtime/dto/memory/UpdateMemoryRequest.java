@@ -1,5 +1,7 @@
 package com.ourtime.dto.memory;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.ourtime.util.FlexibleDateTimeDeserializer;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,8 +26,11 @@ public class UpdateMemoryRequest {
     @Size(max = 200, message = "장소명은 200자 이하여야 합니다.")
     private String locationName;
 
+    @JsonDeserialize(using = FlexibleDateTimeDeserializer.class)
     private LocalDateTime visitedAt;
 
     private List<Long> tagIds;
+    
+    private List<String> tagNames;
 
 }

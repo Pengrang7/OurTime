@@ -16,7 +16,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -37,10 +39,27 @@ public class MemoryController {
     }
 
     @Operation(summary = "추억 생성", description = "새로운 추억을 생성합니다.")
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<MemoryResponse> createMemory(@Valid @RequestBody CreateMemoryRequest request) {
+    public ApiResponse<MemoryResponse> createMemory(
+            @RequestParam("groupId") Long groupId,
+            @RequestParam("title") String title,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam("latitude") Double latitude,
+            @RequestParam("longitude") Double longitude,
+            @RequestParam(value = "locationName", required = false) String locationName,
+            @RequestParam("visitedAt") String visitedAt,
+            @RequestParam(value = "tagNames", required = false) String tagNamesJson,
+            @RequestParam(value = "images", required = false) List<MultipartFile> images) {
+        
         Long userId = SecurityUtil.getCurrentUserId();
+        
+        // CreateMemoryRequest 객체 생성
+        CreateMemoryRequest request = new CreateMemoryRequest(
+            groupId, title, description, latitude, longitude, 
+            locationName, visitedAt, tagNamesJson, images
+        );
+        
         MemoryResponse response = memoryService.createMemory(userId, request);
         return ApiResponse.success(response, "추억이 생성되었습니다.");
     }

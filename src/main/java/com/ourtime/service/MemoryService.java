@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,6 +30,7 @@ public class MemoryService {
     private final UserGroupRepository userGroupRepository;
     private final TagRepository tagRepository;
     private final MemoryTagRepository memoryTagRepository;
+    private final S3Service s3Service;
 
     @Transactional
     public MemoryResponse createMemory(Long userId, CreateMemoryRequest request) {
@@ -43,6 +45,17 @@ public class MemoryService {
             throw new BusinessException(ErrorCode.NOT_GROUP_MEMBER);
         }
 
+        // 이미지 파일 업로드
+        List<String> imageUrls = new ArrayList<>();
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
+            for (var image : request.getImages()) {
+                if (!image.isEmpty()) {
+                    String imageUrl = s3Service.uploadFile(image, "memories");
+                    imageUrls.add(imageUrl);
+                }
+            }
+        }
+
         // 추억 생성
         Memory memory = Memory.builder()
                 .group(group)
@@ -53,12 +66,35 @@ public class MemoryService {
                 .longitude(request.getLongitude())
                 .locationName(request.getLocationName())
                 .visitedAt(request.getVisitedAt())
-                .imageUrls(request.getImageUrls())
+                .imageUrls(imageUrls)
                 .build();
 
         Memory savedMemory = memoryRepository.save(memory);
 
-        // 태그 추가
+        // 태그 추가 (tagNames 사용)
+        if (request.getTagNames() != null && !request.getTagNames().isEmpty()) {
+            for (String tagName : request.getTagNames()) {
+                // 태그가 이미 존재하면 찾고, 없으면 생성
+                Tag tag = tagRepository.findByName(tagName)
+                        .orElseGet(() -> {
+                            Tag newTag = Tag.builder()
+                                    .name(tagName)
+                                    .build();
+                            return tagRepository.save(newTag);
+                        });
+
+                MemoryTag memoryTag = MemoryTag.builder()
+                        .memory(savedMemory)
+                        .tag(tag)
+                        .build();
+
+                MemoryTag savedMemoryTag = memoryTagRepository.save(memoryTag);
+                // Memory의 memoryTags 리스트에도 추가 (양방향 관계 동기화)
+                savedMemory.getMemoryTags().add(savedMemoryTag);
+            }
+        }
+        
+        // tagIds도 처리 (하위 호환성)
         if (request.getTagIds() != null && !request.getTagIds().isEmpty()) {
             for (Long tagId : request.getTagIds()) {
                 Tag tag = tagRepository.findById(tagId)
@@ -69,11 +105,15 @@ public class MemoryService {
                         .tag(tag)
                         .build();
 
-                memoryTagRepository.save(memoryTag);
+                MemoryTag savedMemoryTag = memoryTagRepository.save(memoryTag);
+                // Memory의 memoryTags 리스트에도 추가 (양방향 관계 동기화)
+                savedMemory.getMemoryTags().add(savedMemoryTag);
             }
         }
 
-        log.info("새 추억 생성: {} by {}", savedMemory.getId(), userId);
+        log.info("새 추억 생성: {} (위치: {}, 태그: {}) by {}", 
+                savedMemory.getId(), savedMemory.getLocationName(), 
+                savedMemory.getMemoryTags().size(), userId);
 
         return MemoryResponse.from(savedMemory);
     }
@@ -154,26 +194,51 @@ public class MemoryService {
             memory.updateLocation(request.getLatitude(), request.getLongitude(), request.getLocationName());
         }
 
-        // 태그 업데이트
-        if (request.getTagIds() != null) {
+        // 태그 업데이트 (tagNames 또는 tagIds)
+        if (request.getTagNames() != null || request.getTagIds() != null) {
             // 기존 태그 삭제
-            memoryTagRepository.findAllByMemoryId(memoryId).forEach(memoryTagRepository::delete);
+            List<MemoryTag> existingTags = memoryTagRepository.findAllByMemoryId(memoryId);
+            existingTags.forEach(memoryTagRepository::delete);
+            memory.getMemoryTags().clear();
 
-            // 새 태그 추가
-            for (Long tagId : request.getTagIds()) {
-                Tag tag = tagRepository.findById(tagId)
-                        .orElseThrow(() -> new BusinessException(ErrorCode.TAG_NOT_FOUND));
+            // tagNames로 태그 추가 (우선순위)
+            if (request.getTagNames() != null && !request.getTagNames().isEmpty()) {
+                for (String tagName : request.getTagNames()) {
+                    Tag tag = tagRepository.findByName(tagName)
+                            .orElseGet(() -> {
+                                Tag newTag = Tag.builder()
+                                        .name(tagName)
+                                        .build();
+                                return tagRepository.save(newTag);
+                            });
 
-                MemoryTag memoryTag = MemoryTag.builder()
-                        .memory(memory)
-                        .tag(tag)
-                        .build();
+                    MemoryTag memoryTag = MemoryTag.builder()
+                            .memory(memory)
+                            .tag(tag)
+                            .build();
 
-                memoryTagRepository.save(memoryTag);
+                    MemoryTag savedMemoryTag = memoryTagRepository.save(memoryTag);
+                    memory.getMemoryTags().add(savedMemoryTag);
+                }
+            } 
+            // tagIds로 태그 추가 (하위 호환성)
+            else if (request.getTagIds() != null && !request.getTagIds().isEmpty()) {
+                for (Long tagId : request.getTagIds()) {
+                    Tag tag = tagRepository.findById(tagId)
+                            .orElseThrow(() -> new BusinessException(ErrorCode.TAG_NOT_FOUND));
+
+                    MemoryTag memoryTag = MemoryTag.builder()
+                            .memory(memory)
+                            .tag(tag)
+                            .build();
+
+                    MemoryTag savedMemoryTag = memoryTagRepository.save(memoryTag);
+                    memory.getMemoryTags().add(savedMemoryTag);
+                }
             }
         }
 
-        log.info("추억 업데이트: {}", memoryId);
+        log.info("추억 업데이트: {} (위치: {}, 태그: {})", memoryId, memory.getLocationName(), memory.getMemoryTags().size());
 
         return MemoryResponse.from(memory);
     }
