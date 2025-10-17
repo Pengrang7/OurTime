@@ -2,6 +2,7 @@ export interface User {
   id: number;
   email: string;
   nickname: string;
+  userTag?: string;
   profileImage?: string;
   createdAt: string;
   updatedAt: string;
@@ -22,25 +23,24 @@ export interface Group {
 export interface Memory {
   id: number;
   groupId: number;
-  userId: number;
+  user: User;
   title: string;
   description?: string;
   latitude: number;
   longitude: number;
   locationName?: string;
   visitedAt: string;
-  images: string[];
+  imageUrls: string[];
   tags: Tag[];
-  comments: Comment[];
-  likes: Like[];
+  likeCount: number;
+  commentCount: number;
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface Comment {
   id: number;
   memoryId: number;
-  userId: number;
+  user: User;
   content: string;
   createdAt: string;
   updatedAt: string;

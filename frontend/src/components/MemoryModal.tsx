@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
-import { useMutation, useQueryClient } from 'react-query';
-import { Group, Memory, CreateMemoryRequest } from '../types';
-import { memoryApi } from '../services/api';
+import { useMutation, useQueryClient, useQuery } from 'react-query';
+import { Group, Memory, CreateMemoryRequest, CreateCommentRequest } from '../types';
+import { memoryApi, userApi, commentApi } from '../services/api';
 import toast from 'react-hot-toast';
 
 interface MemoryModalProps {
@@ -32,19 +32,28 @@ const ModalOverlay = styled.div`
 const ModalContent = styled.div`
   background: white;
   border-radius: 16px;
-  padding: 24px;
   width: 90%;
   max-width: 600px;
-  max-height: 80vh;
-  overflow-y: auto;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+`;
+
+const ModalBody = styled.div`
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
 `;
 
 const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  padding: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
 `;
 
 const Title = styled.h2`
@@ -243,6 +252,151 @@ const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
   `}
 `;
 
+const AuthorInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+`;
+
+const AuthorAvatar = styled.div`
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  flex-shrink: 0;
+`;
+
+const AuthorDetails = styled.div`
+  flex: 1;
+`;
+
+const AuthorName = styled.div`
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 16px;
+  margin-bottom: 2px;
+`;
+
+const AuthorTag = styled.div`
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+`;
+
+const CommentsSection = styled.div`
+  padding: 20px;
+  border-top: 1px solid #eee;
+  background: #fafafa;
+`;
+
+const CommentsTitle = styled.h3`
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+`;
+
+const CommentList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 4px;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+`;
+
+const CommentInput = styled.input`
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  
+  &:focus {
+    outline: none;
+    border-color: #1976d2;
+  }
+`;
+
+const CommentButton = styled.button`
+  padding: 10px 16px;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  
+  &:hover {
+    background: #1565c0;
+  }
+  
+  &:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+`;
+
+const CommentForm = styled.form`
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+`;
+
+const CommentItem = styled.div`
+  padding: 12px 16px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+`;
+
+const CommentHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+`;
+
+const CommentAuthor = styled.span`
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+`;
+
+const CommentDate = styled.span`
+  font-size: 12px;
+  color: #999;
+`;
+
+const CommentContent = styled.p`
+  margin: 0;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.5;
+`;
+
 const MemoryModal: React.FC<MemoryModalProps> = ({
   isOpen,
   onClose,
@@ -256,7 +410,29 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
+  const [newComment, setNewComment] = useState('');
   const queryClient = useQueryClient();
+
+  // 현재 로그인한 사용자 정보
+  const { data: currentUser } = useQuery('userProfile', userApi.getProfile);
+
+  // 수정 권한 확인
+  const canEdit = !memory || (currentUser && memory.user.id === currentUser.id);
+
+  // 댓글 조회 (메모리가 있을 때만)
+  const { data: comments = [] } = useQuery(
+    ['comments', memory?.id],
+    () => commentApi.getComments(memory!.id),
+    {
+      enabled: !!memory,
+      onError: (error: any) => {
+        console.error('Comments fetch error:', error);
+      },
+      onSuccess: (data) => {
+        console.log('댓글 조회 성공:', data.length, '개');
+      }
+    }
+  );
 
   const { register, handleSubmit, reset, setValue } = useForm<CreateMemoryRequest>({
     defaultValues: {
@@ -292,6 +468,21 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
       onError: (error: any) => {
         toast.error('메모리 수정에 실패했습니다.');
         console.error('Update memory error:', error);
+      }
+    }
+  );
+
+  const createCommentMutation = useMutation(
+    (data: CreateCommentRequest) => commentApi.createComment(data),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['comments', memory?.id]);
+        setNewComment('');
+        toast.success('댓글이 작성되었습니다!');
+      },
+      onError: (error: any) => {
+        toast.error('댓글 작성에 실패했습니다.');
+        console.error('Create comment error:', error);
       }
     }
   );
@@ -369,7 +560,18 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
     setImagePreviews([]);
     setTags([]);
     setNewTag('');
+    setNewComment('');
     onClose();
+  };
+
+  const handleCommentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !memory) return;
+    
+    createCommentMutation.mutate({
+      memoryId: memory.id,
+      content: newComment.trim()
+    });
   };
 
   if (!isOpen) return null;
@@ -378,14 +580,39 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
     <ModalOverlay onClick={handleClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
-          <Title>{memory ? '메모리 수정' : '새 메모리 추가'}</Title>
+          <Title>
+            {memory ? (canEdit ? '메모리 수정' : '메모리 보기') : '새 메모리 추가'}
+          </Title>
           <CloseButton onClick={handleClose}>×</CloseButton>
         </ModalHeader>
+        
+        <ModalBody>
+          {memory && (
+            <AuthorInfo>
+              <AuthorAvatar>
+                {memory.user.profileImage ? (
+                  <img 
+                    src={memory.user.profileImage} 
+                    alt={memory.user.nickname}
+                    style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  memory.user.nickname.charAt(0).toUpperCase()
+                )}
+              </AuthorAvatar>
+              <AuthorDetails>
+                <AuthorName>{memory.user.nickname}</AuthorName>
+                {memory.user.userTag && (
+                  <AuthorTag>@{memory.user.userTag}</AuthorTag>
+                )}
+              </AuthorDetails>
+            </AuthorInfo>
+          )}
 
-        <Form onSubmit={handleSubmit(onSubmit)}>
+          <Form onSubmit={handleSubmit(onSubmit)}>
           <FormGroup>
             <Label>그룹 *</Label>
-            <Select {...register('groupId', { required: true })}>
+            <Select {...register('groupId', { required: true })} disabled={!canEdit}>
               <option value="">그룹을 선택하세요</option>
               {groups.map(group => (
                 <option key={group.id} value={group.id}>
@@ -400,6 +627,7 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
             <Input
               {...register('title', { required: true })}
               placeholder="메모리 제목을 입력하세요"
+              disabled={!canEdit}
             />
           </FormGroup>
 
@@ -408,6 +636,7 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
             <TextArea
               {...register('description')}
               placeholder="메모리에 대한 설명을 입력하세요"
+              disabled={!canEdit}
             />
           </FormGroup>
 
@@ -416,42 +645,58 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
             <Input
               type="date"
               {...register('visitedAt', { required: true })}
+              disabled={!canEdit}
             />
           </FormGroup>
 
-          <FormGroup>
-            <Label>이미지</Label>
-            <ImageUploadArea onClick={() => document.getElementById('image-upload')?.click()}>
-              <input
-                id="image-upload"
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                style={{ display: 'none' }}
-              />
-              <div>
-                <div style={{ fontSize: '24px', marginBottom: '8px' }}>📷</div>
-                <div>이미지를 업로드하려면 클릭하세요</div>
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                  여러 이미지를 선택할 수 있습니다
+          {canEdit && (
+            <FormGroup>
+              <Label>이미지</Label>
+              <ImageUploadArea onClick={() => document.getElementById('image-upload')?.click()}>
+                <input
+                  id="image-upload"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  style={{ display: 'none' }}
+                />
+                <div>
+                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>📷</div>
+                  <div>이미지를 업로드하려면 클릭하세요</div>
+                  <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                    여러 이미지를 선택할 수 있습니다
+                  </div>
                 </div>
-              </div>
-            </ImageUploadArea>
-            
-            {imagePreviews.length > 0 && (
+              </ImageUploadArea>
+              
+              {imagePreviews.length > 0 && (
+                <ImagePreview>
+                  {imagePreviews.map((preview, index) => (
+                    <ImageItem key={index}>
+                      <Image src={preview} alt={`Preview ${index}`} />
+                      <RemoveButton onClick={() => removeImage(index)}>
+                        ×
+                      </RemoveButton>
+                    </ImageItem>
+                  ))}
+                </ImagePreview>
+              )}
+            </FormGroup>
+          )}
+
+          {!canEdit && memory?.imageUrls && memory.imageUrls.length > 0 && (
+            <FormGroup>
+              <Label>이미지</Label>
               <ImagePreview>
-                {imagePreviews.map((preview, index) => (
+                {memory.imageUrls.map((url, index) => (
                   <ImageItem key={index}>
-                    <Image src={preview} alt={`Preview ${index}`} />
-                    <RemoveButton onClick={() => removeImage(index)}>
-                      ×
-                    </RemoveButton>
+                    <Image src={url} alt={`Memory ${index}`} />
                   </ImageItem>
                 ))}
               </ImagePreview>
-            )}
-          </FormGroup>
+            </FormGroup>
+          )}
 
           <FormGroup>
             <Label>태그</Label>
@@ -459,41 +704,91 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
               {tags.map((tag, index) => (
                 <Tag key={index}>
                   {tag}
-                  <TagRemoveButton onClick={() => removeTag(tag)}>
-                    ×
-                  </TagRemoveButton>
+                  {canEdit && (
+                    <TagRemoveButton onClick={() => removeTag(tag)}>
+                      ×
+                    </TagRemoveButton>
+                  )}
                 </Tag>
               ))}
-              <input
-                type="text"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                placeholder="태그 입력 후 Enter"
-                style={{
-                  border: 'none',
-                  outline: 'none',
-                  background: 'transparent',
-                  flex: 1,
-                  minWidth: '100px'
-                }}
-              />
+              {canEdit && (
+                <input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                  placeholder="태그 입력 후 Enter"
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    background: 'transparent',
+                    flex: 1,
+                    minWidth: '100px'
+                  }}
+                />
+              )}
             </TagInput>
           </FormGroup>
 
           <ButtonGroup>
-            <Button type="button" onClick={handleClose}>
-              취소
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={createMemoryMutation.isLoading || updateMemoryMutation.isLoading}
-            >
-              {memory ? '수정' : '생성'}
-            </Button>
+            {canEdit && (
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={createMemoryMutation.isLoading || updateMemoryMutation.isLoading}
+              >
+                {memory ? '수정' : '생성'}
+              </Button>
+            )}
           </ButtonGroup>
         </Form>
+
+        {/* 댓글 섹션 (메모리가 있을 때만) */}
+        {memory && (
+          <CommentsSection>
+            <CommentsTitle>댓글 ({comments.length})</CommentsTitle>
+            
+            <CommentForm onSubmit={handleCommentSubmit}>
+              <CommentInput
+                type="text"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="댓글을 작성하세요..."
+                disabled={createCommentMutation.isLoading}
+              />
+              <CommentButton 
+                type="submit"
+                disabled={!newComment.trim() || createCommentMutation.isLoading}
+              >
+                {createCommentMutation.isLoading ? '작성 중...' : '작성'}
+              </CommentButton>
+            </CommentForm>
+
+            <CommentList>
+              {comments.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px', color: '#666', fontSize: '14px' }}>
+                  첫 댓글을 작성해보세요!
+                </div>
+              ) : (
+                comments.map(comment => (
+                  <CommentItem key={comment.id}>
+                    <CommentHeader>
+                      <CommentAuthor>{comment.user.nickname}</CommentAuthor>
+                      {comment.user.userTag && (
+                        <span style={{ color: '#666', fontSize: '12px' }}>@{comment.user.userTag}</span>
+                      )}
+                      <CommentDate>
+                        {new Date(comment.createdAt).toLocaleString()}
+                      </CommentDate>
+                    </CommentHeader>
+                    <CommentContent>{comment.content}</CommentContent>
+                  </CommentItem>
+                ))
+              )}
+            </CommentList>
+          </CommentsSection>
+        )}
+        </ModalBody>
       </ModalContent>
     </ModalOverlay>
   );

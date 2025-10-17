@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { memoryApi, commentApi } from '../services/api';
+import { memoryApi, commentApi, userApi } from '../services/api';
 import { CreateCommentRequest } from '../types';
 import toast from 'react-hot-toast';
 
@@ -43,18 +43,56 @@ const MemoryTitle = styled.h1`
   font-weight: 700;
 `;
 
-const MemoryMeta = styled.div`
+const AuthorSection = styled.div`
   display: flex;
-  gap: 16px;
+  align-items: center;
+  gap: 14px;
   margin-bottom: 20px;
+`;
+
+const AuthorAvatar = styled.div`
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+  flex-shrink: 0;
+`;
+
+const AuthorInfo = styled.div`
+  flex: 1;
+`;
+
+const AuthorName = styled.div`
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 18px;
+  margin-bottom: 2px;
+`;
+
+const AuthorTag = styled.div`
+  color: #6b7280;
   font-size: 14px;
-  color: #666;
+  font-weight: 500;
 `;
 
 const MemoryDescription = styled.p`
   color: #333;
   line-height: 1.6;
   margin-bottom: 20px;
+`;
+
+const MemoryMeta = styled.div`
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #666;
 `;
 
 const ImageGrid = styled.div`
@@ -205,8 +243,12 @@ const CommentContent = styled.p`
 
 const MemoryDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [newComment, setNewComment] = useState('');
   const queryClient = useQueryClient();
+
+  // 현재 로그인한 사용자 정보
+  const { data: currentUser } = useQuery('userProfile', userApi.getProfile);
 
   const { data: memory, isLoading } = useQuery(
     ['memory', id],
@@ -216,6 +258,18 @@ const MemoryDetail: React.FC = () => {
       onError: (error: any) => {
         toast.error('메모리를 불러오는데 실패했습니다.');
         console.error('Memory fetch error:', error);
+      }
+    }
+  );
+
+  // 댓글 조회
+  const { data: comments = [] } = useQuery(
+    ['comments', id],
+    () => commentApi.getComments(Number(id)),
+    {
+      enabled: !!id,
+      onError: (error: any) => {
+        console.error('Comments fetch error:', error);
       }
     }
   );
@@ -252,6 +306,7 @@ const MemoryDetail: React.FC = () => {
     (data: CreateCommentRequest) => commentApi.createComment(data),
     {
       onSuccess: () => {
+        queryClient.invalidateQueries(['comments', id]);
         queryClient.invalidateQueries(['memory', id]);
         setNewComment('');
         toast.success('댓글이 작성되었습니다!');
@@ -263,8 +318,22 @@ const MemoryDetail: React.FC = () => {
     }
   );
 
+  const deleteMemoryMutation = useMutation(
+    () => memoryApi.deleteMemory(Number(id)),
+    {
+      onSuccess: () => {
+        toast.success('메모리가 삭제되었습니다.');
+        navigate('/');
+      },
+      onError: (error: any) => {
+        toast.error('메모리 삭제에 실패했습니다.');
+        console.error('Delete memory error:', error);
+      }
+    }
+  );
+
   const handleLike = () => {
-    if (memory?.likes.some(like => like.userId === 1)) { // 실제로는 현재 사용자 ID
+    if (isLiked) {
       unlikeMutation.mutate();
     } else {
       likeMutation.mutate();
@@ -279,6 +348,20 @@ const MemoryDetail: React.FC = () => {
       memoryId: Number(id),
       content: newComment.trim()
     });
+  };
+
+  const handleDelete = () => {
+    if (window.confirm('정말로 이 메모리를 삭제하시겠습니까?')) {
+      deleteMemoryMutation.mutate();
+    }
+  };
+
+  const handleEdit = () => {
+    // 메모리 수정은 지도 페이지에서 해야 하므로 이동
+    toast('메모리 수정은 지도에서 메모리를 클릭하여 수정할 수 있습니다.', {
+      icon: 'ℹ️',
+    });
+    navigate('/');
   };
 
   if (isLoading) {
@@ -301,7 +384,10 @@ const MemoryDetail: React.FC = () => {
     );
   }
 
-  const isLiked = memory.likes.some(like => like.userId === 1); // 실제로는 현재 사용자 ID
+  // 작성자 확인
+  const isAuthor = currentUser && memory.user.id === currentUser.id;
+  // Note: 백엔드에서 현재 사용자의 좋아요 여부를 전달하면 더 좋습니다
+  const isLiked = false; // 임시로 false 설정
 
   return (
     <MemoryDetailContainer>
@@ -312,19 +398,38 @@ const MemoryDetail: React.FC = () => {
       <MemoryCard>
         <MemoryTitle>{memory.title}</MemoryTitle>
         
+        <AuthorSection>
+          <AuthorAvatar>
+            {memory.user.profileImage ? (
+              <img 
+                src={memory.user.profileImage} 
+                alt={memory.user.nickname}
+                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+              />
+            ) : (
+              memory.user.nickname.charAt(0).toUpperCase()
+            )}
+          </AuthorAvatar>
+          <AuthorInfo>
+            <AuthorName>{memory.user.nickname}</AuthorName>
+            {memory.user.userTag && (
+              <AuthorTag>@{memory.user.userTag}</AuthorTag>
+            )}
+          </AuthorInfo>
+        </AuthorSection>
+
         <MemoryMeta>
-          <span>📍 {memory.locationName || '위치 정보 없음'}</span>
           <span>📅 {new Date(memory.visitedAt).toLocaleDateString()}</span>
-          <span>❤️ {memory.likes.length}개</span>
+          <span>❤️ {memory.likeCount}개</span>
         </MemoryMeta>
 
         {memory.description && (
           <MemoryDescription>{memory.description}</MemoryDescription>
         )}
 
-        {memory.images.length > 0 && (
+        {memory.imageUrls && memory.imageUrls.length > 0 && (
           <ImageGrid>
-            {memory.images.map((image, index) => (
+            {memory.imageUrls.map((image, index) => (
               <Image key={index} src={image} alt={`Memory ${index + 1}`} />
             ))}
           </ImageGrid>
@@ -346,11 +451,26 @@ const MemoryDetail: React.FC = () => {
           >
             {isLiked ? '❤️ 좋아요 취소' : '🤍 좋아요'}
           </ActionButton>
+          
+          {isAuthor && (
+            <>
+              <ActionButton onClick={handleEdit}>
+                ✏️ 수정
+              </ActionButton>
+              <ActionButton 
+                onClick={handleDelete}
+                disabled={deleteMemoryMutation.isLoading}
+                style={{ background: '#ef4444', color: 'white' }}
+              >
+                🗑️ 삭제
+              </ActionButton>
+            </>
+          )}
         </ActionButtons>
       </MemoryCard>
 
       <CommentsSection>
-        <CommentsTitle>댓글 ({memory.comments.length})</CommentsTitle>
+        <CommentsTitle>댓글 ({comments.length})</CommentsTitle>
         
         <CommentForm onSubmit={handleCommentSubmit}>
           <CommentInput
@@ -369,17 +489,26 @@ const MemoryDetail: React.FC = () => {
         </CommentForm>
 
         <CommentList>
-          {memory.comments.map(comment => (
-            <CommentItem key={comment.id}>
-              <CommentHeader>
-                <CommentAuthor>사용자 {comment.userId}</CommentAuthor>
-                <CommentDate>
-                  {new Date(comment.createdAt).toLocaleString()}
-                </CommentDate>
-              </CommentHeader>
-              <CommentContent>{comment.content}</CommentContent>
-            </CommentItem>
-          ))}
+          {comments.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+              첫 댓글을 작성해보세요!
+            </div>
+          ) : (
+            comments.map(comment => (
+              <CommentItem key={comment.id}>
+                <CommentHeader>
+                  <CommentAuthor>{comment.user.nickname}</CommentAuthor>
+                  {comment.user.userTag && (
+                    <span style={{ color: '#666', fontSize: '12px' }}>@{comment.user.userTag}</span>
+                  )}
+                  <CommentDate>
+                    {new Date(comment.createdAt).toLocaleString()}
+                  </CommentDate>
+                </CommentHeader>
+                <CommentContent>{comment.content}</CommentContent>
+              </CommentItem>
+            ))
+          )}
         </CommentList>
       </CommentsSection>
     </MemoryDetailContainer>

@@ -40,7 +40,7 @@ public class UserService {
             throw new BusinessException(ErrorCode.NICKNAME_ALREADY_EXISTS);
         }
 
-        user.updateProfile(request.getNickname(), request.getProfileImage());
+        user.updateProfile(request.getNickname(), request.getProfileImage(), request.getUserTag());
         log.info("사용자 프로필 업데이트: {}", userId);
 
         return UserResponse.from(user);

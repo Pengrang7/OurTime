@@ -242,7 +242,7 @@ const NaverMap: React.FC<NaverMapProps> = ({
       const marker = new window.naver.maps.Marker({
         position: new window.naver.maps.LatLng(memory.latitude, memory.longitude),
         map: mapInstance.current,
-        title: memory.title,
+        title: `${memory.title} (by ${memory.user.nickname})`,
         icon: {
           content: `
             <div style="
@@ -257,6 +257,7 @@ const NaverMap: React.FC<NaverMapProps> = ({
               cursor: pointer;
             ">
               📍 ${memory.title}
+              <div style="font-size: 10px; opacity: 0.9; margin-top: 2px;">by ${memory.user.nickname}</div>
             </div>
           `,
           anchor: new window.naver.maps.Point(0, 0)

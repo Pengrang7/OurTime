@@ -27,6 +27,9 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false, length = 50)
     private String nickname;
 
+    @Column(length = 8)
+    private String userTag;
+
     @Column(length = 500)
     private String profileImage;
 
@@ -47,12 +50,15 @@ public class User extends BaseTimeEntity {
     private List<Like> likes = new ArrayList<>();
 
     // 비즈니스 메서드
-    public void updateProfile(String nickname, String profileImage) {
+    public void updateProfile(String nickname, String profileImage, String userTag) {
         if (nickname != null && !nickname.isBlank()) {
             this.nickname = nickname;
         }
         if (profileImage != null) {
             this.profileImage = profileImage;
+        }
+        if (userTag != null && !userTag.isBlank()) {
+            this.userTag = userTag;
         }
     }
 

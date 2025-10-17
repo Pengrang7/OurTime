@@ -199,17 +199,19 @@ export const commentApi = {
   },
 
   createComment: async (data: CreateCommentRequest): Promise<Comment> => {
-    const response = await api.post('/comments', data);
+    const response = await api.post(`/memories/${data.memoryId}/comments`, { 
+      content: data.content 
+    });
     return response.data.data;
   },
 
-  updateComment: async (commentId: number, content: string): Promise<Comment> => {
-    const response = await api.put(`/comments/${commentId}`, { content });
+  updateComment: async (memoryId: number, commentId: number, content: string): Promise<Comment> => {
+    const response = await api.put(`/memories/${memoryId}/comments/${commentId}`, { content });
     return response.data.data;
   },
 
-  deleteComment: async (commentId: number): Promise<void> => {
-    await api.delete(`/comments/${commentId}`);
+  deleteComment: async (memoryId: number, commentId: number): Promise<void> => {
+    await api.delete(`/memories/${memoryId}/comments/${commentId}`);
   },
 };
 
